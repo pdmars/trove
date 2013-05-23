@@ -15,6 +15,7 @@
 import routes
 
 from trove.common import wsgi
+from trove.configuration.service import ConfigurationsController
 from trove.flavor.service import FlavorController
 from trove.instance.service import InstanceController
 from trove.limits.service import LimitsController
@@ -32,6 +33,7 @@ class API(wsgi.Router):
         self._versions_router(mapper)
         self._limits_router(mapper)
         self._backups_router(mapper)
+        self._configurations_router(mapper)
 
     def _versions_router(self, mapper):
         versions_resource = VersionsController().create_resource()
@@ -58,6 +60,12 @@ class API(wsgi.Router):
         path = "/{tenant_id}/backups"
         mapper.resource("backups", path, controller=backups_resource,
                         member={'action': 'POST'})
+
+    def _configurations_router(self, mapper):
+        configuration_controller = ConfigurationsController().create_resource()
+        path = "/{tenant_id}/configurations"
+        mapper.resource("configuration", path,
+                        controller=configuration_controller)
 
 
 def app_factory(global_conf, **local_conf):

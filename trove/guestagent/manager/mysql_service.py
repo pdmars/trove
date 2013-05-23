@@ -32,6 +32,8 @@ UUID = False
 
 TMP_MYCNF = "/tmp/my.cnf.tmp"
 MYSQL_BASE_DIR = "/var/lib/mysql"
+MYCNF_OVERRIDES = "/etc/mysql/conf.d/overrides.cnf"
+MYCNF_OVERRIDES_TMP = "/tmp/overrides.cnf.tmp"
 
 CONF = cfg.CONF
 INCLUDE_MARKER_OPERATORS = {
@@ -651,7 +653,7 @@ class MySqlApp(object):
     def complete_install_or_restart(self):
         self.status.end_install_or_restart()
 
-    def secure(self, config_contents):
+    def secure(self, config_contents, overrides):
         LOG.info(_("Generating admin password..."))
         admin_password = generate_random_password()
 
@@ -662,7 +664,7 @@ class MySqlApp(object):
             self._create_admin_user(client, admin_password)
 
         self.stop_db()
-        self._write_mycnf(admin_password, config_contents)
+        self._write_mycnf(admin_password, config_contents, overrides)
         self.start_mysql()
 
         LOG.info(_("Dbaas secure complete."))
@@ -796,7 +798,7 @@ class MySqlApp(object):
                 if "No such file or directory" not in str(pe):
                     raise
 
-    def _write_mycnf(self, admin_password, config_contents):
+    def _write_mycnf(self, admin_password, config_contents, overrides):
         """
         Install the set of mysql my.cnf templates.
         Update the os_admin user and password to the my.cnf
@@ -818,6 +820,33 @@ class MySqlApp(object):
                                    system.MYSQL_CONFIG)
 
         self.wipe_ib_logfiles()
+
+        # write configuration file overrides
+        if overrides:
+            self._write_config_overrides(overrides)
+
+    def _write_config_overrides(self, overrideValues):
+        LOG.info(_("Writing new temp overrides.cnf file."))
+        overrides = open(MYCNF_OVERRIDES_TMP, 'w')
+
+        # write the header of the overrides file
+        overrides.write("[mysqld]\n")
+
+        # overrides that have empty values should be expressed as-is and
+        # with no equals + value parameter.
+        for k, v in overrideValues.iteritems():
+            if not v:
+                overrides.write("%s\n" % k)
+            else:
+                overrides.write("%s = %s\n" % (k, v))
+
+        overrides.close()
+        LOG.info(_("Moving overrides.cnf into correct location."))
+        utils.execute_with_timeout("sudo", "mv", MYCNF_OVERRIDES_TMP,
+                                   MYCNF_OVERRIDES)
+
+        LOG.info(_("Setting permissions on overrides.cnf"))
+        utils.execute_with_timeout("sudo", "chmod", "0711", MYCNF_OVERRIDES)
 
     def start_mysql(self, update_db=False):
         LOG.info(_("Starting mysql..."))

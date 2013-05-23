@@ -187,6 +187,8 @@ common_opts = [
     cfg.StrOpt('guest_config',
                default='$pybasedir/etc/trove/trove-guestagent.conf.sample',
                help="Path to guestagent config file"),
+    cfg.StrOpt('validation_rules',
+               default="/etc/trove/validation-rules.json"),
 ]
 
 
