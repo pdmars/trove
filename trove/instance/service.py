@@ -196,17 +196,11 @@ class InstanceController(wsgi.Controller):
             # ensure a valid configuration has been passed in and that it
             # belongs to the user requesting it.
             try:
-                configuration = Configuration.load(context, configuration_id)
+                Configuration.load(context, configuration_id)
             except ModelNotFoundError:
                 raise exception.NotFound(
-                    message='Configuration group {0} could not be found'
-                    .format(configuration_id))
-
-            if configuration.tenant_id != tenant_id:
-                raise exception.NotFound(
-                    message='Configuration group {0} could not be found'
-                    .format(configuration_id))
-
+                    message='Configuration group %s could not be found'
+                    % configuration_id)
         else:
             configuration_id = None
 
@@ -242,6 +236,40 @@ class InstanceController(wsgi.Controller):
         LOG.info(_("Updating instance for tenant id %s" % tenant_id))
         LOG.info(_("req: %s" % req))
         LOG.info(_("body: %s" % body))
+        context = req.environ[wsgi.CONTEXT_KEY]
+
+        instance = models.Instance.load(context, id)
+
+        # update name, if supplied
+        if 'name' in body["instance"]:
+            models.Instance.update_db(instance, name=body["instance"]["name"])
+
+        # if configurationRef is set, then we will update the instance to use
+        # the new configuration.  If configurationRef is empty, we want to
+        # disassociate the instance from the configuration group and remove the
+        # active overrides file.
+        if 'configurationRef' in body["instance"]:
+            configurationRef = body["instance"]["configurationRef"]
+
+            if configurationRef:
+                configuration_id = utils.get_id_from_href(
+                    body["instance"]["configurationRef"])
+
+                configuration = models.Configuration.load(
+                    context, configuration_id)
+
+                overrides = {}
+                for i in configuration.items:
+                    overrides[i.configuration_key] = i.configuration_value
+
+                LOG.info(overrides)
+
+                instance.update_overrides(overrides)
+                models.Instance.update_db(instance,
+                                          configuration_id=configuration_id)
+            else:
+                instance.update_overrides({})
+                models.Instance.update_db(instance, configuration_id=None)
 
         return wsgi.Result(None, 202)
 

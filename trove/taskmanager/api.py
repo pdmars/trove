@@ -118,3 +118,10 @@ class API(ManagerAPI):
                    service_type=service_type, volume_size=volume_size,
                    security_groups=security_groups, backup_id=backup_id,
                    overrides=overrides)
+
+    def update_overrides(self, instance_id, overrides=None):
+        LOG.debug("Making async call to update configuration overrides for "
+                  "instance %s" % instance_id)
+
+        self._cast("update_overrides", instance_id=instance_id,
+                   overrides=overrides)

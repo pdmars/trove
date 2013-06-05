@@ -18,8 +18,6 @@ from sqlalchemy.schema import Column
 from sqlalchemy.schema import MetaData
 from sqlalchemy.schema import UniqueConstraint
 from sqlalchemy import orm
-from reddwarf.configuration.models import DBConfiguration
-from reddwarf.configuration.models import DBConfigurationItem
 
 from reddwarf.db.sqlalchemy.migrate_repo.schema import create_tables
 from reddwarf.db.sqlalchemy.migrate_repo.schema import DateTime

@@ -89,6 +89,10 @@ class Manager(periodic_task.PeriodicTasks):
                                        volume_size, security_groups,
                                        backup_id, overrides)
 
+    def update_overrides(self, context, instance_id, overrides):
+        instance_tasks = models.BuiltInstanceTasks.load(context, instance_id)
+        instance_tasks.update_overrides(overrides)
+
     if CONF.exists_notification_transformer:
         @periodic_task.periodic_task(
             ticks_between_runs=CONF.exists_notification_ticks)

@@ -1,22 +1,9 @@
 import eventlet
 import netaddr
 
-from datetime import datetime
-from novaclient import exceptions as nova_exceptions
-from reddwarf.common import cfg
-from reddwarf.common import exception
-from reddwarf.common import utils
-from reddwarf.common.remote import create_dns_client
-from reddwarf.common.remote import create_guest_client
-from reddwarf.common.remote import create_nova_client
-from reddwarf.common.remote import create_nova_volume_client
 from reddwarf.db import models as dbmodels
-from reddwarf.instance.tasks import InstanceTask
-from reddwarf.instance.tasks import InstanceTasks
-from reddwarf.guestagent import models as agent_models
-from reddwarf.taskmanager import api as task_api
 from reddwarf.openstack.common import log as logging
-from reddwarf.openstack.common.gettextutils import _
+from reddwarf.taskmanager import api as task_api
 
 from eventlet import greenthread
 
@@ -48,6 +35,10 @@ class Configuration(object):
     def instances(self):
         return self.instances
 
+    @property
+    def items(self):
+        return self.items
+
     @staticmethod
     def create(name, description, tenant_id, values):
         configurationGroup = DBConfiguration.create(name=name,
@@ -66,20 +57,32 @@ class Configuration(object):
             id=id, tenant_id=context.tenant)
         return configuration_from_db
 
+    @staticmethod
+    def save(context, configuration):
+        DBConfiguration.save(configuration)
 
-def persisted_models():
-    return {
-        'configuration': DBConfiguration,
-        'configuration_item': DBConfigurationItem
-    }
+        for instance in configuration.instances:
+
+            overrides = {}
+            for i in configuration.items:
+                overrides[i.configuration_key] = i.configuration_value
+
+            task_api.API(context).update_overrides(instance.id, overrides)
 
 
 class DBConfiguration(dbmodels.DatabaseModelBase):
-    _data_fields = ['name', 'description', 'tenant_id']
+    _data_fields = ['name', 'description', 'tenant_id', 'items', 'instances']
 
 
-class DBConfigurationItem(dbmodels.DatabaseModelBase):
+class ConfigurationItem(dbmodels.DatabaseModelBase):
     _data_fields = ['configuration_key', 'configuration_value']
 
     def __hash__(self):
         return self.configuration_key.__hash__()
+
+
+def persisted_models():
+    return {
+        'configuration': DBConfiguration,
+        'configuration_item': ConfigurationItem
+    }

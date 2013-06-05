@@ -16,6 +16,7 @@ import routes
 
 from trove.common import wsgi
 from trove.configuration.service import ConfigurationsController
+from trove.configuration.service import ParametersController
 from trove.flavor.service import FlavorController
 from trove.instance.service import InstanceController
 from trove.limits.service import LimitsController
@@ -62,10 +63,15 @@ class API(wsgi.Router):
                         member={'action': 'POST'})
 
     def _configurations_router(self, mapper):
-        configuration_controller = ConfigurationsController().create_resource()
+        configuration_resource = ConfigurationsController().create_resource()
         path = "/{tenant_id}/configurations"
         mapper.resource("configuration", path,
-                        controller=configuration_controller)
+                        controller=configuration_resource)
+
+        parameters_resource = ParametersController().create_resource()
+        parametersPath = "/{tenant_id}/configuration-parameters"
+        mapper.resource("parameters", parametersPath,
+                        controller=parameters_resource)
 
 
 def app_factory(global_conf, **local_conf):

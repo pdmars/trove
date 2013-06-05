@@ -154,3 +154,7 @@ class Manager(periodic_task.PeriodicTasks):
         :param backup_id: the db instance id of the backup task
         """
         backup.backup(context, backup_id)
+
+    def update_overrides(self, context, overrides):
+        app = MySqlApp(MySqlAppStatus.get())
+        app.update_overrides(overrides)

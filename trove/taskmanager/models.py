@@ -549,6 +549,14 @@ class BuiltInstanceTasks(BuiltInstance, NotifyMixin, ConfigurationMixin):
             LOG.debug("Restarting FINALLY  %s " % self.id)
             self.update_db(task_status=inst_models.InstanceTasks.NONE)
 
+    def update_overrides(self, overrides):
+        LOG.debug("Updating configuration overrides on instance %s" % self.id)
+        try:
+            self.guest.update_overrides(overrides)
+            LOG.debug("Configuration override update successful.")
+        except GuestError:
+            LOG.error("Failed to update configuration overrides.")
+
     def _refresh_compute_server_info(self):
         """Refreshes the compute server field."""
         server = self.nova_client.servers.get(self.server.id)

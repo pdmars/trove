@@ -268,3 +268,8 @@ class API(proxy.RpcProxy):
         """Make async call to create a full backup of this instance"""
         LOG.debug(_("Create Backup %s for Instance %s"), backup_id, self.id)
         self._cast("create_backup", backup_id=backup_id)
+
+    def update_overrides(self, overrides):
+        LOG.debug(_("Updating overrides values %s for instance %s"),
+                  overrides, self.id)
+        self._cast("update_overrides", overrides=overrides)

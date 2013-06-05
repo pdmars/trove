@@ -1,3 +1,5 @@
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
+
 # Copyright 2013 Rackspace
 # All Rights Reserved.
 #
@@ -13,6 +15,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+
 import routes
 import webob.exc
 import json
@@ -22,7 +25,7 @@ from reddwarf.common import exception
 from reddwarf.common import pagination
 from reddwarf.common import utils
 from reddwarf.common import wsgi
-from reddwarf.configuration.models import DBConfigurationItem
+from reddwarf.configuration.models import ConfigurationItem
 
 from reddwarf.openstack.common import log as logging
 from reddwarf.openstack.common.gettextutils import _
@@ -37,7 +40,6 @@ LOG = logging.getLogger(__name__)
 
 class ConfigurationsController(wsgi.Controller):
     def index(self, req, tenant_id):
-
         context = req.environ[wsgi.CONTEXT_KEY]
         configurations = models.Configurations.load(context)
 
@@ -52,10 +54,8 @@ class ConfigurationsController(wsgi.Controller):
             configuration).data(), 200)
 
     def create(self, req, body, tenant_id):
-        context = req.environ[wsgi.CONTEXT_KEY]
-
-        LOG.info(_("req : '%s'\n\n") % req)
-        LOG.info(_("body : '%s'\n\n") % req)
+        LOG.debug(_("req : '%s'\n\n") % req)
+        LOG.debug(_("body : '%s'\n\n") % req)
 
         name = body['configuration']['name']
         description = body['configuration']['description']
@@ -68,22 +68,23 @@ class ConfigurationsController(wsgi.Controller):
                 body['configuration']['values'])
 
             for k, v in values.iteritems():
-                configItems.append(DBConfigurationItem(configuration_key=k,
-                                                       configuration_value=v))
+                configItems.append(ConfigurationItem(configuration_key=k,
+                                                     configuration_value=v))
 
         cfg_group = models.Configuration.create(name, description, tenant_id,
                                                 configItems)
 
-        LOG.info (cfg_group.id)
-        # LOG.info(_("Created configuration group {0} with ID {0}" %
-        #            cfg_group.name, str(cfg_group.id)))
-
         return wsgi.Result(views.DetailedConfigurationView(cfg_group).data(),
                            200)
 
-    def delete(self, req, tenant_id, id):
+    def delete(self, req, body, tenant_id, id):
         context = req.environ[wsgi.CONTEXT_KEY]
         group = models.Configuration.load(context, id)
+
+        # ensure group is empty before permitting the delete operation.
+        if group.instances:
+            raise exception.InstanceAssignedToConfiguration()
+
         group.delete()
 
         return wsgi.Result(None, 202)
@@ -106,21 +107,19 @@ class ConfigurationsController(wsgi.Controller):
             ConfigurationsController._validate_configuration(
                 body['configuration']['values'])
             for k, v in body['configuration']['values'].iteritems():
-                items.append(DBConfigurationItem(configuration_id=group.id,
-                                                 configuration_key=k,
-                                                 configuration_value=v))
+                items.append(ConfigurationItem(configuration_id=group.id,
+                                               configuration_key=k,
+                                               configuration_value=v))
 
             group.items = items
 
-        group.save()
+        models.Configuration.save(context, group)
 
         return wsgi.Result(None, 202)
 
     @staticmethod
     def _validate_configuration(values):
-        validation_config = open(CONF.validation_rules)
-
-        rules = json.load(validation_config)
+        rules = cfg.get_validation_rules()
 
         LOG.info(_("Validating configuration values"))
         for k, v in values.iteritems():
@@ -140,8 +139,6 @@ class ConfigurationsController(wsgi.Controller):
                               " %s. Expected type of %s." % (k, valueType)))
 
             ## TODO(jrodom): integer min/max checking
-
-        validation_config.close()
 
     @staticmethod
     def _find_type(valueType):
@@ -166,3 +163,10 @@ class ConfigurationsController(wsgi.Controller):
             message=_("%s is not a supported configuration key. Please refer "
                       "to /configuration-parameters for a list of supported "
                       "keys." % key))
+
+
+class ParametersController(wsgi.Controller):
+    def index(self, req, tenant_id):
+        rules = cfg.get_validation_rules()
+        return wsgi.Result(views.ConfigurationParametersView(rules).data(),
+                           200)

@@ -607,6 +607,10 @@ class Instance(BuiltInstance):
         LOG.error(msg)
         raise exception.UnprocessableEntity(msg)
 
+    def update_overrides(self, overrides):
+        LOG.debug("Updating or removing overrides for instance %s" % self.id)
+        task_api.API(self.context).update_overrides(self.id, overrides)
+
 
 def create_server_list_matcher(server_list):
     # Returns a method which finds a server from the given list.
