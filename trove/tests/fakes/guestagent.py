@@ -308,6 +308,10 @@ class FakeGuest(object):
             backup.save()
         self.event_spawn(1.0, finish_create_backup)
 
+    def update_overrides(self, overrides):
+        # There is nothing to do here, this just involves writing or deleting
+        # a mysql overrides configuration file
+        pass
 
 def get_or_create(id):
     if id not in DB:

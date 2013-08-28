@@ -20,19 +20,17 @@ import routes
 import webob.exc
 import json
 
-from reddwarf.common import cfg
-from reddwarf.common import exception
-from reddwarf.common import pagination
-from reddwarf.common import utils
-from reddwarf.common import wsgi
-from reddwarf.configuration.models import ConfigurationItem
+from trove.common import cfg
+from trove.common import exception
+from trove.common import pagination
+from trove.common import utils
+from trove.common import wsgi
+from trove.configuration import models
+from trove.configuration import views
+from trove.configuration.models import ConfigurationItem
+from trove.openstack.common import log as logging
+from trove.openstack.common.gettextutils import _
 
-from reddwarf.openstack.common import log as logging
-from reddwarf.openstack.common.gettextutils import _
-
-
-from reddwarf.configuration import models
-from reddwarf.configuration import views
 
 CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
@@ -58,7 +56,7 @@ class ConfigurationsController(wsgi.Controller):
         LOG.debug(_("body : '%s'\n\n") % req)
 
         name = body['configuration']['name']
-        description = body['configuration']['description']
+        description = body['configuration'].get('description')
         values = body['configuration']['values']
 
         configItems = []
@@ -77,12 +75,14 @@ class ConfigurationsController(wsgi.Controller):
         return wsgi.Result(views.DetailedConfigurationView(cfg_group).data(),
                            200)
 
-    def delete(self, req, body, tenant_id, id):
+    def delete(self, req, tenant_id, id):
         context = req.environ[wsgi.CONTEXT_KEY]
         group = models.Configuration.load(context, id)
 
         # ensure group is empty before permitting the delete operation.
-        if group.instances:
+        # TODO(pdmars): allow group to be deleted if instances deleted?
+        running_instances = [x for x in group.instances if not x.deleted]
+        if running_instances:
             raise exception.InstanceAssignedToConfiguration()
 
         group.delete()
@@ -138,18 +138,40 @@ class ConfigurationsController(wsgi.Controller):
                     message=_("Incorrect data type supplied as a value for key"
                               " %s. Expected type of %s." % (k, valueType)))
 
-            ## TODO(jrodom): integer min/max checking
+            # integer min/max checking
+            if isinstance(v, int):
+                try:
+                    min_value = int(rule['min'])
+                except ValueError as ve:
+                    raise exception.TroveError(_(
+                        "Invalid or unsupported min value defined in the "
+                        "configuration-parameters configuration file. "
+                        "Expected integer."))
+                if v < min_value:
+                    raise exception.UnprocessableEntity(
+                        message=_("Value for %s less than min." % k))
+
+                try:
+                    max_value = int(rule['max'])
+                except ValueError as ve:
+                    raise exception.TroveError(_(
+                        "Invalid or unsupported max value defined in the "
+                        "configuration-parameters configuration file. "
+                        "Expected integer."))
+                if v > max_value:
+                    raise exception.UnprocessableEntity(
+                        message=_("Value for %s greater than max." % k))
 
     @staticmethod
     def _find_type(valueType):
         if valueType == "boolean":
             return bool
         elif valueType == "string":
-            return str
+            return basestring
         elif valueType == "integer":
             return int
         else:
-            raise exception.ReddwarfError(_(
+            raise exception.TroveError(_(
                 "Invalid or unsupported type defined in the "
                 "configuration-parameters configuration file."))
 

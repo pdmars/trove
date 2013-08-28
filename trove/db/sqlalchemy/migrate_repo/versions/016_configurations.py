@@ -19,12 +19,12 @@ from sqlalchemy.schema import MetaData
 from sqlalchemy.schema import UniqueConstraint
 from sqlalchemy import orm
 
-from reddwarf.db.sqlalchemy.migrate_repo.schema import create_tables
-from reddwarf.db.sqlalchemy.migrate_repo.schema import DateTime
-from reddwarf.db.sqlalchemy.migrate_repo.schema import drop_tables
-from reddwarf.db.sqlalchemy.migrate_repo.schema import Integer
-from reddwarf.db.sqlalchemy.migrate_repo.schema import String
-from reddwarf.db.sqlalchemy.migrate_repo.schema import Table
+from trove.db.sqlalchemy.migrate_repo.schema import create_tables
+from trove.db.sqlalchemy.migrate_repo.schema import DateTime
+from trove.db.sqlalchemy.migrate_repo.schema import drop_tables
+from trove.db.sqlalchemy.migrate_repo.schema import Integer
+from trove.db.sqlalchemy.migrate_repo.schema import String
+from trove.db.sqlalchemy.migrate_repo.schema import Table
 
 meta = MetaData()
 

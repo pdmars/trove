@@ -1,9 +1,9 @@
 import eventlet
 import netaddr
 
-from reddwarf.db import models as dbmodels
-from reddwarf.openstack.common import log as logging
-from reddwarf.taskmanager import api as task_api
+from trove.db import models as dbmodels
+from trove.openstack.common import log as logging
+from trove.taskmanager import api as task_api
 
 from eventlet import greenthread
 

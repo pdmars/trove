@@ -771,7 +771,11 @@ class MySqlApp(object):
                 for k, v in overrides.iteritems():
                     q = query.SetServerVariable(key=k, value=v)
                     t = text(str(q))
-                    client.execute(t)
+                    try:
+                        client.execute(t)
+                    except exc.OperationalError as oe:
+                        LOG.exception("Unable to set %s with value %s" % (k, v))
+                        LOG.exception(oe)
         else:
             LOG.debug("removing overrides.cnf config file")
             self._remove_overrides()
@@ -934,13 +938,15 @@ class MySqlApp(object):
                         "MySQL state == %s!") % self.status)
             raise RuntimeError("MySQL not stopped.")
         LOG.info(_("Initiating config."))
-        self._write_mycnf(None, config_contents)
+        # TODO(pdmars): update this with overrides information?
+        self._write_mycnf(None, config_contents, None)
         self.start_mysql(True)
 
     def reset_configuration(self, configuration):
         config_contents = configuration['config_contents']
         LOG.info(_("Resetting configuration"))
-        self._write_mycnf(None, config_contents)
+        # TODO(pdmars): update this with overrides information?
+        self._write_mycnf(None, config_contents, None)
 
     def is_installed(self):
         #(cp16net) could raise an exception, does it need to be handled here?

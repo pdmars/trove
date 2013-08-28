@@ -63,15 +63,15 @@ class API(wsgi.Router):
                         member={'action': 'POST'})
 
     def _configurations_router(self, mapper):
+        parameters_resource = ParametersController().create_resource()
+        parametersPath = "/{tenant_id}/configurations/parameters"
+        mapper.resource("parameters", parametersPath,
+                        controller=parameters_resource)
+
         configuration_resource = ConfigurationsController().create_resource()
         path = "/{tenant_id}/configurations"
         mapper.resource("configuration", path,
                         controller=configuration_resource)
-
-        parameters_resource = ParametersController().create_resource()
-        parametersPath = "/{tenant_id}/configuration-parameters"
-        mapper.resource("parameters", parametersPath,
-                        controller=parameters_resource)
 
 
 def app_factory(global_conf, **local_conf):
