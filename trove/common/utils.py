@@ -309,3 +309,18 @@ def correct_id_with_req(id, request):
             # Not the relevant routing_args entry.
             pass
     return id
+
+
+def try_recover(func):
+    def _decorator(*args, **kwargs):
+        recover_func = kwargs.pop("recover_func", None)
+        try:
+            func(*args, **kwargs)
+        except Exception:
+            if recover_func is not None:
+                recover_func(func)
+            else:
+                LOG.debug(_("No recovery method defined for %(func)s") % {
+                          'func': func.__name__})
+            raise
+    return _decorator
